@@ -1,0 +1,70 @@
+- name: My playbook
+  hosts: all
+  gather_facts: true
+  debugger: no
+  module_defaults:
+    group/aws:
+    region: us-west-2
+  vars_prompt:
+     - name: myvar
+       prompt: "Enter the variable value...."
+       private: no
+  vars:
+     my_unsafe_variable: !unsafe 'unsafe % value'
+     path: /vz-data
+  tasks:
+    - name: Register a file content as a variable
+      ansible.builtin.shell: cat ~/whatsapp-cron-job-prod.yml
+      register: result
+
+    - name: Print the transformed variable
+      ansible.builtin.debug:
+        msg: '{{ item.spec.jobTemplate.spec.template.spec.containers[0].image }}'
+      loop: '{{ result.stdout | from_yaml_all | list }}'
+    - name: Print the transformed variable
+      ansible.builtin.debug:
+        msg: '{{ item | dict2items(key_name="src", value_name="data") }}'
+      loop: '{{ result.stdout | from_yaml_all | list }}'
+    - name: network filter
+      vars:
+        mycidr: "192.0.2.1/24"
+        test_list: ['192.24.2.1', '::1', '192.168.32.0/24', 'fe80::100/10' ]
+        url: "http://user:password@www.acme.com:9000/dir/index.html?query=term#fragment"
+      ansible.builtin.debug:
+        msg: '{{ mycidr | ansible.netcommon.ipaddr("address") }}'
+        msg: '{{ test_list | ansible.netcommon.ipaddr("address") }}'
+        msg: '{{ url | urlsplit("hostname") }}'
+        msg: '{{ url | urlsplit }}'
+        msg: '{{ url | regex_search("http://user:password@www.acme.com:([0-9]+)") }}'
+    - name: valid but useless and over complicated chained lookups and filters
+      debug: 
+        msg: 'find the answer here:\n{{ lookup("url", "https://google.com/") }}'
+   # - name: Create directory for ansible custom facts
+   #   ansible.builtin.file:
+   #     state: directory
+   #     recurse: yes
+   #     path: /etc/ansible/facts.d
+
+   # - name: Install custom ipmi fact
+   #   ansible.builtin.copy:
+   #     src: ipmi.fact
+   #     dest: /etc/ansible/facts.d
+
+   # - name: Re-read facts after adding custom fact
+   #   ansible.builtin.setup:
+   #     filter: ansible_local
+   # + item|urlencode)|join(' ') }}"
+   # with_nested:
+      #- "{{ lookup('consul_kv', 'bcs/' + lookup('file', '/the/question') + ', host=localhost, port=2000')|shuffle }}"
+      #- "{{ lookup('sequence', 'end=42 start=2 step=2')|map('log', 4)|list) }}"
+      #- ['a', 'c', 'd', 'c']
+    - name: Get info
+      debug:
+        msg: '{{ myvar }}'
+    - name: Unsafe variables 
+      debug:
+        msg: '{{ my_unsafe_variable }}'
+    - name: The mount point for {{path}}, found using the Ansible mount facts, [-1] is the same as the 'last' filter
+      ansible.builtin.debug:
+        msg: '{{(ansible_facts.mounts | selectattr("mount", "in", path) | list | sort(attribute=mount))[-1][mount]}}'
+
